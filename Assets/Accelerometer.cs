@@ -13,6 +13,6 @@ public class Accelerometer : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        transform.Translate(Input.acceleration.x, 0, -Input.acceleration.z);
+        transform.Translate(Input.acceleration.x * 0.05f, 0, -Input.acceleration.z * 0.05f);
     }
 }

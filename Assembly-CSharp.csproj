@@ -58,20 +58,16 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Accelerometer.cs" />
-    <Compile Include="Assets\AllTouchControl.cs" />
-    <Compile Include="Assets\Drag.cs" />
     <Compile Include="Assets\Gyro.cs" />
     <Compile Include="Assets\GyroManager.cs" />
     <Compile Include="Assets\InputManager.cs" />
     <Compile Include="Assets\Manipulate.cs" />
     <Compile Include="Assets\MenuScript.cs" />
-    <Compile Include="Assets\PinchZoom.cs" />
-    <Compile Include="Assets\Rotate.cs" />
     <Compile Include="Assets\Rotate2.cs" />
-    <Compile Include="Assets\Scale.cs" />
     <Compile Include="Assets\Scenes\scene1.cs" />
     <Compile Include="Assets\Scenes\scene2.cs" />
     <Compile Include="Assets\SelectedObject.cs" />
+    <Compile Include="Assets\StartButton.cs" />
     <Reference Include="Unity.TextMeshPro.Editor">
       <HintPath>C:/Users/Declan/Desktop/UnityProject/Library/ScriptAssemblies/Unity.TextMeshPro.Editor.dll</HintPath>
     </Reference>

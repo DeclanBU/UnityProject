@@ -5,13 +5,17 @@ using UnityEngine.Experimental.UIElements.StyleEnums;
 
 public class InputManager : MonoBehaviour
 {
+    //Static reference to the selected object to get it from other scripts easily
+    public static SelectedObject TheSelectedObject;
+
+    
+    //Public variables:
     public float ScalingSpeed = 0.4f;
-    public float RotationSpeed = 1f;
     public float MinDistanceToPinch = 20;
 
+    
+    //Private variables:
     private Camera mainCam;
-
-    public static SelectedObject TheSelectedObject;
 
     //Dragging variables
     private bool dragging = false;
@@ -21,11 +25,12 @@ public class InputManager : MonoBehaviour
     private float scalingTouchDistance;
 
     //Rotation variables
-    private Vector3 rotationStartingVector;
+    private Vector3 initialRotationVector;
 
     // Start is called before the first frame update
     void Start()
     {
+        //Cache the main camera
         mainCam = Camera.main;
     }
 
@@ -35,10 +40,12 @@ public class InputManager : MonoBehaviour
         //Select object on touch
         if (Input.touchCount == 1)
         {
+            //Cast a ray on the touch position
             if (Input.GetTouch(0).phase == TouchPhase.Began)
             {
                 RaycastHit rayHit;
 
+                //Check if a selectable object was hit and select it
                 if (Physics.Raycast(mainCam.ScreenPointToRay(Input.mousePosition), out rayHit, Mathf.Infinity))
                 {
                     SelectedObject oldSelectedObject = TheSelectedObject;
@@ -56,7 +63,7 @@ public class InputManager : MonoBehaviour
                     }
                     else
                     {
-                        //Deselect object
+                        //Deselect object if a selectable object is not clicked
                         if (TheSelectedObject != null)
                         {
                             TheSelectedObject.OnSelect(false);
@@ -66,7 +73,7 @@ public class InputManager : MonoBehaviour
                 }
                 else
                 {
-                    //Deselect object
+                    //Deselect object if nothing is hit
                     if (TheSelectedObject != null)
                     {
                         TheSelectedObject.OnSelect(false);
@@ -80,6 +87,7 @@ public class InputManager : MonoBehaviour
         //Drag object
         if (Input.touchCount < 1)
         {
+            //Disable dragging if there is no touches
             dragging = false;
         }
         else
@@ -88,7 +96,7 @@ public class InputManager : MonoBehaviour
             var touch = Input.touches[0];
             Vector2 pos = touch.position;
 
-            //Check if we have a selected object
+            //Check if there is a selected object
             if (TheSelectedObject != null)
             {
                 //Check if touch just started
@@ -97,7 +105,7 @@ public class InputManager : MonoBehaviour
                     RaycastHit hit;
                     Ray ray = mainCam.ScreenPointToRay(pos);
 
-                    //Check if we have an object in that point
+                    //Check if there is an object at that point
                     if (Physics.Raycast(ray, out hit))
                     {
                         dragginDistance = Vector3.Distance(hit.transform.position, Camera.main.transform.position);
@@ -105,16 +113,17 @@ public class InputManager : MonoBehaviour
                     }
                 }
 
-                //Check if we moved the touch
+                //Check if the touch is moved
                 if (dragging && touch.phase == TouchPhase.Moved)
                 {
+                    //When touch is moved - move the position of the object
                     Vector3 position = new Vector3(Input.mousePosition.x, Input.mousePosition.y, dragginDistance);
                     position = mainCam.ScreenToWorldPoint(position);
                     TheSelectedObject.transform.position = position;
                 }
             }
 
-            //Check if the touch ended
+            //Check if the touch ended and disable dragging if it did
             if (dragging && (touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled))
             {
                 dragging = false;
@@ -123,28 +132,34 @@ public class InputManager : MonoBehaviour
 
 
         //Scaling and rotating object
-        //Check if we have a object selected
-        if (TheSelectedObject)
+        if (Input.touchCount == 2)
         {
-            if (Input.touchCount == 2)
+            //Check if one of the touches just began
+            if (Input.GetTouch(0).phase == TouchPhase.Began || Input.GetTouch(1).phase == TouchPhase.Began)
             {
-                //Check if one of the touches just began
-                if (Input.GetTouch(0).phase == TouchPhase.Began || Input.GetTouch(1).phase == TouchPhase.Began)
+                //Set the initial distance between touches and the vector between them, which is needed for rotation
+                scalingTouchDistance = Vector3.Distance(Input.GetTouch(0).position, Input.GetTouch(1).position);
+                initialRotationVector = Input.GetTouch(1).position - Input.GetTouch(0).position;
+            }
+
+            //Check if at least one of the touches is moving
+            if (Input.GetTouch(0).phase == TouchPhase.Moved || Input.GetTouch(1).phase == TouchPhase.Moved)
+            {
+                //Get the current distance between the touches and calculate the difference between that and the initial one
+                float currentTouchDistance =
+                    Vector3.Distance(Input.GetTouch(0).position, Input.GetTouch(1).position);
+
+                float deltaDistance = currentTouchDistance - scalingTouchDistance;
+                
+                //Get the current vector between the two touches
+                Vector3 currentRotationVector = Input.GetTouch(1).position - Input.GetTouch(0).position;
+
+                if (deltaDistance > MinDistanceToPinch)
                 {
-                    scalingTouchDistance = Vector3.Distance(Input.GetTouch(0).position, Input.GetTouch(1).position);
-                    rotationStartingVector = Input.GetTouch(1).position - Input.GetTouch(0).position;
-                }
-
-                //Check if at least one of the touches is moving
-                if (Input.GetTouch(0).phase == TouchPhase.Moved || Input.GetTouch(1).phase == TouchPhase.Moved)
-                {
-                    float currentTouchDistance =
-                        Vector3.Distance(Input.GetTouch(0).position, Input.GetTouch(1).position);
-
-                    float deltaDistance = currentTouchDistance - scalingTouchDistance;
-
-                    if (deltaDistance > MinDistanceToPinch)
+                    //Check if we have an object selected
+                    if (TheSelectedObject)
                     {
+                        //Check if we are pinching in or out
                         if (deltaDistance > 0)
                         {
                             //We are pinching out
@@ -157,37 +172,57 @@ public class InputManager : MonoBehaviour
                         else if (deltaDistance < 0)
                         {
                             //Pinching in
+                            //Decrease the scale of the object by the scaling speed
                             Vector3 currentScale = TheSelectedObject.transform.localScale;
                             Vector3 newScale = new Vector3(currentScale.x - ScalingSpeed, currentScale.y - ScalingSpeed,
                                 currentScale.z - ScalingSpeed);
                             TheSelectedObject.transform.localScale = newScale;
                         }
                     }
+                }
+                else
+                {
+                    //Handle rotation
+                    //Get the angle between the starting vector and current vector between the two touches
+                    float currentAngle = Vector3.Angle(initialRotationVector, currentRotationVector);
+                    
+                    //Get the difference between the x of the vectors so we can check what direction is the user rrotating
+                    float deltaX = currentRotationVector.x - initialRotationVector.x;
+                    if (TheSelectedObject)
+                    {
+                        //Rotate the object in the appropriate direction
+                        if (Mathf.Abs(currentAngle) > 1f)
+                        {
+                            if(deltaX > 0)
+                            TheSelectedObject.transform.Rotate(0, 0, currentAngle,
+                                Space.World);
+                            else if(deltaX < 0)
+                                TheSelectedObject.transform.Rotate(0, 0, -currentAngle,
+                                    Space.World);
+                            initialRotationVector = currentRotationVector;
+                        }
+                    }
                     else
                     {
-                        Vector3 currentRotationVector = Input.GetTouch(1).position - Input.GetTouch(0).position;
-
-                        float angle = Vector3.Angle(rotationStartingVector, currentRotationVector);
-                        Vector3 cross = Vector3.Cross(rotationStartingVector, currentRotationVector);
-
-                        if(cross.z != 0)
-                            rotationStartingVector = Input.GetTouch(1).position - Input.GetTouch(0).position;
-                        
-                        //Check rotation side
-                        if (cross.z > 0)
+                        //Rotate the camera in the appropriate direction
+                        if (Mathf.Abs(currentAngle) > 1f)
                         {
-                            TheSelectedObject.transform.Rotate(0, 0, angle * RotationSpeed);
-                        }
-                        else if (cross.z < 0)
-                        {
-                            TheSelectedObject.transform.Rotate(0, 0, angle * -RotationSpeed);
+                            if(deltaX > 0)
+                                mainCam.transform.Rotate(0, currentAngle, 0,
+                                    Space.World);
+                            else if(deltaX < 0)
+                                mainCam.transform.Rotate(0, -currentAngle, 0,
+                                    Space.World);
+                            initialRotationVector = currentRotationVector;
                         }
                     }
                 }
 
+                //Reset the touch distance and the initial vector at end of touch
                 if (Input.GetTouch(0).phase == TouchPhase.Ended || Input.GetTouch(1).phase == TouchPhase.Ended)
                 {
                     scalingTouchDistance = 0;
+                    initialRotationVector = currentRotationVector;
                 }
             }
         }
